@@ -1,29 +1,18 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>QR Scanner</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-</head>
-<body>
-  <h2>QR Scanner Kamera</h2>
-  <div id="reader" style="width:300px;"></div>
-  <p id="result"></p>
+let scanner = new Html5Qrcode("reader");
 
-  <script>
-    function onScanSuccess(decodedText) {
-      document.getElementById("result").innerText = "Hasil: " + decodedText;
-    }
+Html5Qrcode.getCameras().then(devices => {
+  if (devices && devices.length) {
+    let backCamera = devices.find(device => device.label.toLowerCase().includes('back')) || devices[0];
 
-    function onScanError(error) {
-      // ignore
-    }
-
-    let scanner = new Html5QrcodeScanner(
-      "reader",
-      { fps: 10, qrbox: 250 }
+    scanner.start(
+      backCamera.id,
+      { fps: 10, qrbox: 250 },
+      (decodedText) => {
+        document.getElementById("result").innerText = "Hasil: " + decodedText;
+      },
+      (errorMessage) => {}
     );
-
-    scanner.render(onScanSuccess, onScanError);
-  </script>
-</body>
-</html>
+  }
+}).catch(err => {
+  console.error(err);
+});
