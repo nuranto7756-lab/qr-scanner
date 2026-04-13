@@ -1,20 +1,35 @@
 let scanner = new Html5Qrcode("reader");
 
-// Dengarkan perintah dari Google Apps Script untuk menyalakan kamera
 window.addEventListener("message", function(event) {
   if (event.data === "START_CAMERA") {
+    // Memastikan izin diminta saat tombol diklik
     Html5Qrcode.getCameras().then(devices => {
       if (devices && devices.length) {
-        let backCamera = devices.find(device => device.label.toLowerCase().includes('back')) || devices[0];
+        // Pilih kamera belakang, jika tidak ada pakai kamera pertama yang ditemukan
+        let backCamera = devices.find(device => 
+          device.label.toLowerCase().includes('back') || 
+          device.label.toLowerCase().includes('rear')
+        ) || devices[0];
+
         scanner.start(
           backCamera.id,
-          { fps: 10, qrbox: { width: 250, height: 250 } },
+          { 
+            fps: 15, 
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0 
+          },
           (decodedText) => {
-            window.parent.postMessage(decodedText, "*"); // Kirim hasil
-            scanner.stop(); // Matikan setelah dapat
+            window.parent.postMessage(decodedText, "*");
+            scanner.stop();
           }
-        ).catch(err => console.error(err));
+        ).catch(err => {
+          console.error("Gagal Start:", err);
+          document.getElementById("result").innerText = "Gagal: " + err;
+        });
       }
+    }).catch(err => {
+      console.error("Gagal akses kamera:", err);
+      document.getElementById("result").innerText = "Izin ditolak!";
     });
   }
 });
