@@ -1,11 +1,10 @@
-let scanner = new Html5Qrcode("reader");
+const scanner = new Html5Qrcode("reader");
 
 window.addEventListener("message", function(event) {
+  // Jika menerima perintah START
   if (event.data === "START_CAMERA") {
-    // Memastikan izin diminta saat tombol diklik
     Html5Qrcode.getCameras().then(devices => {
       if (devices && devices.length) {
-        // Pilih kamera belakang, jika tidak ada pakai kamera pertama yang ditemukan
         let backCamera = devices.find(device => 
           device.label.toLowerCase().includes('back') || 
           device.label.toLowerCase().includes('rear')
@@ -13,23 +12,20 @@ window.addEventListener("message", function(event) {
 
         scanner.start(
           backCamera.id,
-          { 
-            fps: 15, 
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0 
-          },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
           (decodedText) => {
-            window.parent.postMessage(decodedText, "*");
-            scanner.stop();
+            window.parent.postMessage(decodedText, "*"); // Kirim hasil ke GAS
+            scanner.stop(); // Matikan kamera setelah berhasil
           }
-        ).catch(err => {
-          console.error("Gagal Start:", err);
-          document.getElementById("result").innerText = "Gagal: " + err;
-        });
+        ).catch(err => console.error("Gagal Start:", err));
       }
-    }).catch(err => {
-      console.error("Gagal akses kamera:", err);
-      document.getElementById("result").innerText = "Izin ditolak!";
-    });
+    }).catch(err => console.error("Gagal Kamera:", err));
+  } 
+  
+  // Jika menerima perintah STOP
+  else if (event.data === "STOP_CAMERA") {
+    if (scanner.isScanning) {
+      scanner.stop().catch(err => console.log("Kamera sudah mati"));
+    }
   }
 });
