@@ -2,17 +2,33 @@ let scanner = new Html5Qrcode("reader");
 
 Html5Qrcode.getCameras().then(devices => {
   if (devices && devices.length) {
+    // Mencari kamera belakang
     let backCamera = devices.find(device => device.label.toLowerCase().includes('back')) || devices[0];
 
     scanner.start(
       backCamera.id,
-      { fps: 10, qrbox: 250 },
-      (decodedText) => {
-        document.getElementById("result").innerText = "Hasil: " + decodedText;
+      { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 } // Menggunakan objek untuk qrbox agar lebih stabil
       },
-      (errorMessage) => {}
+      (decodedText) => {
+        // 1. Tampilkan di layar lokal GitHub
+        document.getElementById("result").innerText = "Berhasil: " + decodedText;
+
+        // 2. Kirim data ke Google Apps Script (Parent)
+        window.parent.postMessage(decodedText, "*");
+
+        // 3. Berhenti scan agar kamera mati setelah dapat data
+        scanner.stop().then(() => {
+          console.log("Kamera dimatikan.");
+        }).catch((err) => console.error("Gagal matikan kamera:", err));
+      },
+      (errorMessage) => {
+        // Scanning... (abaikan log ini agar tidak memenuhi konsol)
+      }
     );
   }
 }).catch(err => {
-  console.error(err);
+  console.error("Izin kamera ditolak:", err);
+  document.getElementById("result").innerText = "Error: Kamera tidak diizinkan.";
 });
