@@ -1,35 +1,115 @@
-let scanner = new Html5Qrcode("reader");
+// Logika Scanner & UI untuk GitHub
+let currentMode = 'masuk';
+let html5QrcodeScanner;
 
-window.addEventListener("message", function(event) {
-  if (event.data === "START_CAMERA") {
-    // Memastikan izin diminta saat tombol diklik
-    Html5Qrcode.getCameras().then(devices => {
-      if (devices && devices.length) {
-        // Pilih kamera belakang, jika tidak ada pakai kamera pertama yang ditemukan
-        let backCamera = devices.find(device => 
-          device.label.toLowerCase().includes('back') || 
-          device.label.toLowerCase().includes('rear')
-        ) || devices[0];
+function startScanner() {
+  document.getElementById('reader').style.display = 'block';
+  document.getElementById('btnMulaiScan').classList.add('hidden');
+  document.getElementById('btnStopScan').classList.remove('hidden');
 
-        scanner.start(
-          backCamera.id,
-          { 
-            fps: 15, 
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0 
-          },
-          (decodedText) => {
-            window.parent.postMessage(decodedText, "*");
-            scanner.stop();
-          }
-        ).catch(err => {
-          console.error("Gagal Start:", err);
-          document.getElementById("result").innerText = "Gagal: " + err;
-        });
-      }
-    }).catch(err => {
-      console.error("Gagal akses kamera:", err);
-      document.getElementById("result").innerText = "Izin ditolak!";
+  html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+    fps: 10, 
+    qrbox: { width: 250, height: 250 } 
+  }, false);
+  
+  html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+}
+
+function stopScanner() {
+  if (html5QrcodeScanner) {
+    html5QrcodeScanner.clear().then(() => {
+      document.getElementById('reader').style.display = 'none';
+      document.getElementById('btnMulaiScan').classList.remove('hidden');
+      document.getElementById('btnStopScan').classList.add('hidden');
     });
   }
-});
+}
+
+function onScanSuccess(decodedText) {
+  stopScanner();
+  document.getElementById('inputQR').value = decodedText;
+  fetchItemData(decodedText);
+}
+
+function onScanFailure(error) { /* Abaikan error scan */ }
+
+function fetchItemData(qrCode) {
+  document.getElementById('inputNama').value = "Mencari data...";
+  document.getElementById('imgPreview').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-2xl"></i>';
+
+  google.script.run
+    .withSuccessHandler(item => {
+      if(item) {
+        document.getElementById('inputNama').value = item.nama;
+        document.getElementById('inputSaldo').value = "SALDO: " + item.saldo;
+        document.getElementById('imgPreview').innerHTML = item.gambar ? `<img src="${item.gambar}" class="h-24 object-contain rounded-md">` : "Gambar tidak tersedia";
+      } else {
+        alert("Barang tidak ditemukan!");
+        document.getElementById('inputNama').value = "-- TIDAK DITEMUKAN --";
+        document.getElementById('imgPreview').innerHTML = "-- Kosong --";
+      }
+    })
+    .getDataByQR(qrCode);
+}
+
+function switchTab(target) {
+  const tabT = document.getElementById('tabTransaksi'), tabL = document.getElementById('tabLog');
+  const contentT = document.getElementById('contentTransaksi'), contentL = document.getElementById('contentLog');
+  if (target === 'transaksi') {
+    tabT.className = 'w-1/2 py-3 tab-active cursor-pointer'; tabL.className = 'w-1/2 py-3 tab-inactive cursor-pointer';
+    contentT.classList.remove('hidden'); contentL.classList.add('hidden');
+  } else {
+    tabL.className = 'w-1/2 py-3 tab-active cursor-pointer'; tabT.className = 'w-1/2 py-3 tab-inactive cursor-pointer';
+    contentL.classList.remove('hidden'); contentT.classList.add('hidden');
+    loadLogs();
+  }
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  const bM = document.getElementById('btnMasuk'), bK = document.getElementById('btnKeluar'), dC = document.getElementById('deptContainer'), bS = document.getElementById('btnSubmit');
+  if (mode === 'masuk') {
+    bM.className = 'w-1/2 py-2 rounded-md bg-green-500 text-white shadow-md flex justify-center items-center gap-2'; 
+    bK.className = 'w-1/2 py-2 rounded-md bg-gray-100 text-gray-500 border flex justify-center items-center gap-2';
+    dC.classList.add('hidden'); bS.style.backgroundColor = "#4ade80";
+  } else {
+    bM.className = 'w-1/2 py-2 rounded-md bg-gray-100 text-gray-500 border flex justify-center items-center gap-2'; 
+    bK.className = 'w-1/2 py-2 rounded-md bg-[#dc2626] text-white shadow-md flex justify-center items-center gap-2';
+    dC.classList.remove('hidden'); bS.style.backgroundColor = "#dc2626";
+  }
+}
+
+function submitData() {
+  const btn = document.getElementById('btnSubmit');
+  const qr = document.getElementById('inputQR').value;
+  const nama = document.getElementById('inputNama').value;
+  const jumlah = document.getElementById('inputJumlah').value;
+  const dept = document.getElementById('departemen').value;
+
+  if (!qr || nama.includes("--")) return alert("Scan barang dulu!");
+  if (currentMode === 'keluar' && !dept) return alert("Pilih Departemen!");
+  
+  btn.disabled = true; 
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROSES...';
+  
+  google.script.run
+    .withSuccessHandler(res => { alert(res); location.reload(); })
+    .withFailureHandler(err => { alert("Gagal: " + err.message); btn.disabled = false; btn.innerHTML = 'KONFIRMASI'; })
+    .submitTransaction({ qr, jumlah, jenis: currentMode, dept: currentMode === 'keluar' ? dept : "-" });
+}
+
+function loadLogs() {
+  const tbody = document.getElementById('logTableBody');
+  google.script.run.withSuccessHandler(data => {
+    if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">Kosong</td></tr>'; return; }
+    tbody.innerHTML = data.map(row => `
+      <tr class="hover:bg-gray-50">
+        <td class="px-2 py-3 border-r text-center">${row[0]}</td>
+        <td class="px-2 py-3 border-r whitespace-nowrap">${new Date(row[1]).toLocaleTimeString('id-ID')}</td>
+        <td class="px-2 py-3 border-r text-center font-bold ${row[2] === 'MASUK' ? 'text-green-600' : 'text-red-600'}">${row[2]}</td>
+        <td class="px-2 py-3 border-r font-medium">${row[4]}</td>
+        <td class="px-2 py-3 border-r text-center font-bold">${row[5]}</td>
+        <td class="px-2 py-3 text-center font-bold text-blue-600">${row[7]}</td>
+      </tr>`).join('');
+  }).getRecentLogs();
+}
