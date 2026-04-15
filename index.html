@@ -54,14 +54,15 @@
             }
         }
 
-function onScanSuccess(qrCode) {
-    stopScanner();
-    
-    // GANTI URL INI dengan URL Web App Apps Script Anda
-    const webAppUrl = "https://script.google.com/macros/s/AKfycb...UR_ID.../exec";
-    
-    // Mengalihkan halaman sambil mengirimkan kode QR sebagai parameter 'qr'
-    window.location.href = webAppUrl + "?qr=" + qrCode;
+function onScanSuccess(decodedText, decodedResult) {
+    // Berhenti scan agar tidak berat
+    html5QrCode.stop().then(() => {
+        // MENGIRIM PESAN KE PARENT (Web Apps Script)
+        window.parent.postMessage({
+            type: 'QR_SCANNED',
+            code: decodedText
+        }, '*');
+    });
 }    </script>
 </body>
 </html>
