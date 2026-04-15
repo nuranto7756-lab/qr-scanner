@@ -1,133 +1,76 @@
-// Logika Scanner & UI untuk GitHub
-let currentMode = 'masuk';
-let html5QrcodeScanner;
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Scanner - PT Hydraxle</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+        <h1 class="text-xl font-bold text-center text-red-600 mb-4">SCANNER GUDANG (GITHUB MODE)</h1>
+        
+        <div id="reader" class="mb-4 overflow-hidden rounded-lg"></div>
+        
+        <div class="flex gap-2 mb-4">
+            <button id="btnStart" onclick="startScanner()" class="w-full py-2 bg-blue-600 text-white rounded">Mulai Kamera</button>
+            <button id="btnStop" onclick="stopScanner()" class="w-full py-2 bg-red-600 text-white rounded hidden">Stop</button>
+        </div>
 
-function startScanner() {
-  document.getElementById('reader').style.display = 'block';
-  document.getElementById('btnMulaiScan').classList.add('hidden');
-  document.getElementById('btnStopScan').classList.remove('hidden');
+        <div class="space-y-3">
+            <div class="border p-2 rounded bg-gray-50">
+                <p class="text-xs text-gray-500">Nama Barang:</p>
+                <p id="result_nama" class="font-bold">-</p>
+            </div>
+            <div id="imgContainer" class="h-40 border flex items-center justify-center bg-white">
+                <img id="result_img" src="" class="max-h-full hidden">
+                <span id="imgPlaceholder" class="text-gray-400 italic">Pratinjau Gambar</span>
+            </div>
+        </div>
+    </div>
 
-  html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
-    fps: 10, 
-    qrbox: { width: 250, height: 250 } 
-  }, false);
-  
-  html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-}
+    <script>
+        let html5QrCode;
+        // GANTI URL INI dengan URL Web App (Deployment) Anda yang berakhiran /exec
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycb...UR_ID.../exec";
 
-function stopScanner() {
-  if (html5QrcodeScanner) {
-    html5QrcodeScanner.clear().then(() => {
-      document.getElementById('reader').style.display = 'none';
-      document.getElementById('btnMulaiScan').classList.remove('hidden');
-      document.getElementById('btnStopScan').classList.add('hidden');
-    });
-  }
-}
+        function startScanner() {
+            document.getElementById('btnStart').classList.add('hidden');
+            document.getElementById('btnStop').classList.remove('hidden');
+            
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-function onScanSuccess(decodedText, decodedResult) {
-    // Berhenti scan agar tidak duplikat
-    html5QrcodeScanner.clear();
-    
-    // URL Web App Google Apps Script Anda (yang berakhiran /exec)
-    const scriptURL = 'https://script.google.com/macros/s/AKfycb...your_id.../exec';
-
-    fetch(scriptURL, {
-        method: 'POST',
-        body: JSON.stringify({ qrCode: decodedText })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === "success") {
-            // Tampilkan data di layar GitHub Anda
-            document.getElementById('result_nama').innerText = data.nama;
-            document.getElementById('result_saldo').innerText = data.saldo;
-            document.getElementById('result_img').src = data.gambar.replace("open?id=", "thumbnail?id=");
-        } else {
-            alert("Barang tidak ditemukan di database!");
+            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+                onScanSuccess(decodedText);
+            });
         }
-    })
-    .catch(error => console.error('Error!', error.message));
-}
-function onScanFailure(error) { /* Abaikan error scan */ }
 
-function fetchItemData(qrCode) {
-  document.getElementById('inputNama').value = "Mencari data...";
-  document.getElementById('imgPreview').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-2xl"></i>';
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('btnStart').classList.remove('hidden');
+                    document.getElementById('btnStop').classList.add('hidden');
+                });
+            }
+        }
 
-  google.script.run
-    .withSuccessHandler(item => {
-      if(item) {
-        document.getElementById('inputNama').value = item.nama;
-        document.getElementById('inputSaldo').value = "SALDO: " + item.saldo;
-        document.getElementById('imgPreview').innerHTML = item.gambar ? `<img src="${item.gambar}" class="h-24 object-contain rounded-md">` : "Gambar tidak tersedia";
-      } else {
-        alert("Barang tidak ditemukan!");
-        document.getElementById('inputNama').value = "-- TIDAK DITEMUKAN --";
-        document.getElementById('imgPreview').innerHTML = "-- Kosong --";
-      }
-    })
-    .getDataByQR(qrCode);
-}
+        function onScanSuccess(qrCode) {
+            stopScanner();
+            document.getElementById('result_nama').innerText = "Mencari data...";
 
-function switchTab(target) {
-  const tabT = document.getElementById('tabTransaksi'), tabL = document.getElementById('tabLog');
-  const contentT = document.getElementById('contentTransaksi'), contentL = document.getElementById('contentLog');
-  if (target === 'transaksi') {
-    tabT.className = 'w-1/2 py-3 tab-active cursor-pointer'; tabL.className = 'w-1/2 py-3 tab-inactive cursor-pointer';
-    contentT.classList.remove('hidden'); contentL.classList.add('hidden');
-  } else {
-    tabL.className = 'w-1/2 py-3 tab-active cursor-pointer'; tabT.className = 'w-1/2 py-3 tab-inactive cursor-pointer';
-    contentL.classList.remove('hidden'); contentT.classList.add('hidden');
-    loadLogs();
-  }
-}
-
-function setMode(mode) {
-  currentMode = mode;
-  const bM = document.getElementById('btnMasuk'), bK = document.getElementById('btnKeluar'), dC = document.getElementById('deptContainer'), bS = document.getElementById('btnSubmit');
-  if (mode === 'masuk') {
-    bM.className = 'w-1/2 py-2 rounded-md bg-green-500 text-white shadow-md flex justify-center items-center gap-2'; 
-    bK.className = 'w-1/2 py-2 rounded-md bg-gray-100 text-gray-500 border flex justify-center items-center gap-2';
-    dC.classList.add('hidden'); bS.style.backgroundColor = "#4ade80";
-  } else {
-    bM.className = 'w-1/2 py-2 rounded-md bg-gray-100 text-gray-500 border flex justify-center items-center gap-2'; 
-    bK.className = 'w-1/2 py-2 rounded-md bg-[#dc2626] text-white shadow-md flex justify-center items-center gap-2';
-    dC.classList.remove('hidden'); bS.style.backgroundColor = "#dc2626";
-  }
-}
-
-function submitData() {
-  const btn = document.getElementById('btnSubmit');
-  const qr = document.getElementById('inputQR').value;
-  const nama = document.getElementById('inputNama').value;
-  const jumlah = document.getElementById('inputJumlah').value;
-  const dept = document.getElementById('departemen').value;
-
-  if (!qr || nama.includes("--")) return alert("Scan barang dulu!");
-  if (currentMode === 'keluar' && !dept) return alert("Pilih Departemen!");
-  
-  btn.disabled = true; 
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> PROSES...';
-  
-  google.script.run
-    .withSuccessHandler(res => { alert(res); location.reload(); })
-    .withFailureHandler(err => { alert("Gagal: " + err.message); btn.disabled = false; btn.innerHTML = 'KONFIRMASI'; })
-    .submitTransaction({ qr, jumlah, jenis: currentMode, dept: currentMode === 'keluar' ? dept : "-" });
-}
-
-function loadLogs() {
-  const tbody = document.getElementById('logTableBody');
-  google.script.run.withSuccessHandler(data => {
-    if (!data.length) { tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-400">Kosong</td></tr>'; return; }
-    tbody.innerHTML = data.map(row => `
-      <tr class="hover:bg-gray-50">
-        <td class="px-2 py-3 border-r text-center">${row[0]}</td>
-        <td class="px-2 py-3 border-r whitespace-nowrap">${new Date(row[1]).toLocaleTimeString('id-ID')}</td>
-        <td class="px-2 py-3 border-r text-center font-bold ${row[2] === 'MASUK' ? 'text-green-600' : 'text-red-600'}">${row[2]}</td>
-        <td class="px-2 py-3 border-r font-medium">${row[4]}</td>
-        <td class="px-2 py-3 border-r text-center font-bold">${row[5]}</td>
-        <td class="px-2 py-3 text-center font-bold text-blue-600">${row[7]}</td>
-      </tr>`).join('');
-  }).getRecentLogs();
-}
+            // Mengirim data ke Google Apps Script via POST
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors", // Penting untuk menghindari error CORS di GAS
+                body: JSON.stringify({ qr: qrCode })
+            })
+            .then(() => {
+                alert("Scan Berhasil: " + qrCode + ". Data dikirim ke Google Sheets.");
+                // Catatan: Karena mode 'no-cors', kita tidak bisa baca balasan JSON secara langsung
+                // Untuk melihat data, cek di Google Sheets Anda apakah log sudah masuk.
+            })
+            .catch(err => alert("Error: " + err));
+        }
+    </script>
+</body>
+</html>
