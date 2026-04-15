@@ -25,12 +25,30 @@ function stopScanner() {
   }
 }
 
-function onScanSuccess(decodedText) {
-  stopScanner();
-  document.getElementById('inputQR').value = decodedText;
-  fetchItemData(decodedText);
-}
+function onScanSuccess(decodedText, decodedResult) {
+    // Berhenti scan agar tidak duplikat
+    html5QrcodeScanner.clear();
+    
+    // URL Web App Google Apps Script Anda (yang berakhiran /exec)
+    const scriptURL = 'https://script.google.com/macros/s/AKfycb...your_id.../exec';
 
+    fetch(scriptURL, {
+        method: 'POST',
+        body: JSON.stringify({ qrCode: decodedText })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            // Tampilkan data di layar GitHub Anda
+            document.getElementById('result_nama').innerText = data.nama;
+            document.getElementById('result_saldo').innerText = data.saldo;
+            document.getElementById('result_img').src = data.gambar.replace("open?id=", "thumbnail?id=");
+        } else {
+            alert("Barang tidak ditemukan di database!");
+        }
+    })
+    .catch(error => console.error('Error!', error.message));
+}
 function onScanFailure(error) { /* Abaikan error scan */ }
 
 function fetchItemData(qrCode) {
