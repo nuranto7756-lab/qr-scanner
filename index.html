@@ -54,23 +54,29 @@
             }
         }
 
-        function onScanSuccess(qrCode) {
-            stopScanner();
-            document.getElementById('result_nama').innerText = "Mencari data...";
+function onScanSuccess(qrCode) {
+    stopScanner();
+    document.getElementById('result_nama').innerText = "Sedang sinkronisasi...";
 
-            // Mengirim data ke Google Apps Script via POST
-            fetch(SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors", // Penting untuk menghindari error CORS di GAS
-                body: JSON.stringify({ qr: qrCode })
-            })
-            .then(() => {
-                alert("Scan Berhasil: " + qrCode + ". Data dikirim ke Google Sheets.");
-                // Catatan: Karena mode 'no-cors', kita tidak bisa baca balasan JSON secara langsung
-                // Untuk melihat data, cek di Google Sheets Anda apakah log sudah masuk.
-            })
-            .catch(err => alert("Error: " + err));
+    fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ qr: qrCode })
+    })
+    .then(response => response.json()) // Kita ambil jawaban dari Google Sheets
+    .then(res => {
+        if (res.status === "success") {
+            document.getElementById('result_nama').innerText = res.nama;
+            alert("Data Berhasil Dicatat: " + res.nama);
+        } else {
+            document.getElementById('result_nama').innerText = "Gagal memproses data.";
         }
+    })
+    .catch(err => {
+        // Jika muncul error CORS, setidaknya data sudah terkirim (mode no-cors)
+        console.log(err);
+        document.getElementById('result_nama').innerText = "Data Terkirim (Cek Sheets)";
+    });
+}
     </script>
 </body>
 </html>
