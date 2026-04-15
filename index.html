@@ -56,27 +56,12 @@
 
 function onScanSuccess(qrCode) {
     stopScanner();
-    document.getElementById('result_nama').innerText = "Sedang sinkronisasi...";
-
-    fetch(SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ qr: qrCode })
-    })
-    .then(response => response.json()) // Kita ambil jawaban dari Google Sheets
-    .then(res => {
-        if (res.status === "success") {
-            document.getElementById('result_nama').innerText = res.nama;
-            alert("Data Berhasil Dicatat: " + res.nama);
-        } else {
-            document.getElementById('result_nama').innerText = "Gagal memproses data.";
-        }
-    })
-    .catch(err => {
-        // Jika muncul error CORS, setidaknya data sudah terkirim (mode no-cors)
-        console.log(err);
-        document.getElementById('result_nama').innerText = "Data Terkirim (Cek Sheets)";
-    });
-}
-    </script>
+    
+    // GANTI URL INI dengan URL Web App Apps Script Anda
+    const webAppUrl = "https://script.google.com/macros/s/AKfycb...UR_ID.../exec";
+    
+    // Mengalihkan halaman sambil mengirimkan kode QR sebagai parameter 'qr'
+    window.location.href = webAppUrl + "?qr=" + qrCode;
+}    </script>
 </body>
 </html>
