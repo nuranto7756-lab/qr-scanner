@@ -1,68 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>QR Scanner - PT Hydraxle</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-4">
-    <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
-        <h1 class="text-xl font-bold text-center text-red-600 mb-4">SCANNER GUDANG (GITHUB MODE)</h1>
-        
-        <div id="reader" class="mb-4 overflow-hidden rounded-lg"></div>
-        
-        <div class="flex gap-2 mb-4">
-            <button id="btnStart" onclick="startScanner()" class="w-full py-2 bg-blue-600 text-white rounded">Mulai Kamera</button>
-            <button id="btnStop" onclick="stopScanner()" class="w-full py-2 bg-red-600 text-white rounded hidden">Stop</button>
-        </div>
-
-        <div class="space-y-3">
-            <div class="border p-2 rounded bg-gray-50">
-                <p class="text-xs text-gray-500">Nama Barang:</p>
-                <p id="result_nama" class="font-bold">-</p>
-            </div>
-            <div id="imgContainer" class="h-40 border flex items-center justify-center bg-white">
-                <img id="result_img" src="" class="max-h-full hidden">
-                <span id="imgPlaceholder" class="text-gray-400 italic">Pratinjau Gambar</span>
-            </div>
-        </div>
-    </div>
+<body style="margin:0; padding:0; overflow:hidden; background:transparent;">
+    <div id="reader" style="width: 100%; height: 100vh;"></div>
 
     <script>
-        let html5QrCode;
-        // GANTI URL INI dengan URL Web App (Deployment) Anda yang berakhiran /exec
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycb...UR_ID.../exec";
+        const html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-        function startScanner() {
-            document.getElementById('btnStart').classList.add('hidden');
-            document.getElementById('btnStop').classList.remove('hidden');
-            
-            html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                onScanSuccess(decodedText);
-            });
-        }
-
-        function stopScanner() {
-            if (html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    document.getElementById('btnStart').classList.remove('hidden');
-                    document.getElementById('btnStop').classList.add('hidden');
-                });
-            }
-        }
-
-function onScanSuccess(decodedText, decodedResult) {
-    // Berhenti scan agar tidak berat
-    html5QrCode.stop().then(() => {
-        // MENGIRIM PESAN KE PARENT (Web Apps Script)
-        window.parent.postMessage({
-            type: 'QR_SCANNED',
-            code: decodedText
-        }, '*');
-    });
-}    </script>
+        // Langsung nyalakan kamera begitu iframe dipanggil
+        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+            // KIRIM HASIL KE APPS SCRIPT
+            window.parent.postMessage({ type: 'QR_SCANNED', code: decodedText }, '*');
+            html5QrCode.stop();
+        });
+    </script>
 </body>
 </html>
