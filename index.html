@@ -3,17 +3,32 @@
 <head>
     <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
-<body style="margin:0; padding:0; overflow:hidden; background:transparent;">
+<body style="margin:0; padding:0; overflow:hidden; background:black;">
     <div id="reader" style="width: 100%; height: 100vh;"></div>
     <script>
         const html5QrCode = new Html5Qrcode("reader");
         const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-            // INI KUNCINYA: Mengirim kode ke Apps Script tanpa pindah halaman
-            window.parent.postMessage({ type: 'QR_SCANNED', code: decodedText }, '*');
-            html5QrCode.stop();
-        });
+        // Buat fungsi start yang bisa dipanggil
+        function jalankanKamera() {
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                config, 
+                (decodedText) => {
+                    window.parent.postMessage({ type: 'QR_SCANNED', code: decodedText }, '*');
+                    html5QrCode.stop();
+                }
+            ).catch(err => {
+                console.error("Kamera gagal:", err);
+            });
+        }
+
+        // Tunggu sinyal dari Apps Script baru nyalakan kamera
+        window.onmessage = function(e) {
+            if (e.data.type === 'START_SCAN') {
+                jalankanKamera();
+            }
+        };
     </script>
 </body>
 </html>
