@@ -6,21 +6,23 @@
 <body style="margin:0; padding:0; overflow:hidden; background:black;">
     <div id="reader" style="width: 100%; height: 100vh;"></div>
     <script>
-        const html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+const html5QrCode = new Html5Qrcode("reader");
+const config = { fps: 10, qrbox: { width: 250, height: 250 } };
 
-        // Buat fungsi start yang bisa dipanggil
-        function jalankanKamera() {
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                (decodedText) => {
-                    window.parent.postMessage({ type: 'QR_SCANNED', code: decodedText }, '*');
-                    html5QrCode.stop();
-                }
-            ).catch(err => {
-                console.error("Kamera gagal:", err);
-            });
+html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+    // KIRIM DATA KE JENDELA INDUK (Apps Script)
+    if (window.opener) {
+        window.opener.postMessage({ type: 'QR_SCANNED', code: decodedText }, '*');
+        
+        // BERHENTI & TUTUP JENDELA OTOMATIS
+        html5QrCode.stop().then(() => {
+            window.close(); 
+        });
+    } else {
+        // Jika dibuka langsung tanpa pop-up
+        alert("Kode QR: " + decodedText);
+    }
+});
         }
 
         // Tunggu sinyal dari Apps Script baru nyalakan kamera
